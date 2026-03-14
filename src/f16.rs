@@ -1,8 +1,8 @@
 use crate::{R10c, sealed};
 
-const PREFERRED: [f64; 12] =
+const PREFERRED: [f16; 12] =
     [0.8, 1.0, 1.25, 1.6, 2.0, 2.5, 3.2, 4.0, 5.0, 6.4, 8.0, 10.0];
-const LOWER_BOUNDARIES: [f64; 11] = [
+const LOWER_BOUNDARIES: [f16; 11] = [
     -0.09691001300805639,
     0.0,
     0.09691001300805642,
@@ -15,7 +15,7 @@ const LOWER_BOUNDARIES: [f64; 11] = [
     0.8061799739838872,
     0.9030899869919435,
 ];
-const MID_BOUNDARIES: [f64; 11] = [
+const MID_BOUNDARIES: [f16; 11] = [
     -0.048455006504028196,
     0.04845500650402821,
     0.1505149978319906,
@@ -28,7 +28,7 @@ const MID_BOUNDARIES: [f64; 11] = [
     0.8546349804879154,
     0.9515449934959718,
 ];
-const UPPER_BOUNDARIES: [f64; 11] = [
+const UPPER_BOUNDARIES: [f16; 11] = [
     0.0,
     0.09691001300805642,
     0.2041199826559248,
@@ -41,24 +41,24 @@ const UPPER_BOUNDARIES: [f64; 11] = [
     0.9030899869919435,
     1.0,
 ];
-const TEN: f64 = 10.0;
+const TEN: f16 = 10.0;
 
 struct Syndrome {
     /// 0, -1 or 1.
-    sign: f64,
+    sign: f16,
     /// Value between 0 and 1.
-    locator: f64,
+    locator: f16,
     /// Exponent.
     decade: i32,
 }
 
 impl Syndrome {
-    fn new(n: f64) -> Self {
+    fn new(n: f16) -> Self {
         let abs = n.abs();
         let sign = n.signum();
         let log10 = abs.log10();
         let decade = log10.floor() as i32;
-        let locator = log10 - (decade as f64);
+        let locator = log10 - (decade as f16);
 
         return Syndrome {
             sign,
@@ -68,9 +68,9 @@ impl Syndrome {
     }
 }
 
-impl sealed::Marker for f64 {}
+impl sealed::Marker for f16 {}
 
-impl R10c for f64 {
+impl R10c for f16 {
     fn prev(n: Self) -> Self {
         if (!n.is_finite()) || n == 0.0 {
             return n;
@@ -105,7 +105,7 @@ impl R10c for f64 {
     }
 }
 
-fn search(locator: f64, boundaries: &[f64]) -> usize {
+fn search(locator: f16, boundaries: &[f16]) -> usize {
     let mut left = 0 as usize;
     let mut right = boundaries.len();
 
