@@ -2,19 +2,6 @@ use crate::{R10c, sealed};
 
 const PREFERRED: [f128; 12] =
     [0.8, 1.0, 1.25, 1.6, 2.0, 2.5, 3.2, 4.0, 5.0, 6.4, 8.0, 10.0];
-const LOWER_BOUNDARIES: [f128; 11] = [
-    -0.09691001300805639,
-    0.0,
-    0.09691001300805642,
-    0.2041199826559248,
-    0.3010299956639812,
-    0.3979400086720376,
-    0.505149978319906,
-    0.6020599913279624,
-    0.6989700043360189,
-    0.8061799739838872,
-    0.9030899869919435,
-];
 const MID_BOUNDARIES: [f128; 11] = [
     -0.048455006504028196,
     0.04845500650402821,
@@ -27,19 +14,6 @@ const MID_BOUNDARIES: [f128; 11] = [
     0.752574989159953,
     0.8546349804879154,
     0.9515449934959718,
-];
-const UPPER_BOUNDARIES: [f128; 11] = [
-    0.0,
-    0.09691001300805642,
-    0.2041199826559248,
-    0.3010299956639812,
-    0.3979400086720376,
-    0.505149978319906,
-    0.6020599913279624,
-    0.6989700043360189,
-    0.8061799739838872,
-    0.9030899869919435,
-    1.0,
 ];
 const TEN: f128 = 10.0;
 
@@ -76,10 +50,13 @@ impl R10c for f128 {
             return n;
         }
 
-        let syndrome = Syndrome::new(n);
-        let idx = search(syndrome.locator, &UPPER_BOUNDARIES);
+        if n < 0.0 {
+            -Self::next(n.abs())
+        } else {
+            let m = Self::near(n);
 
-        PREFERRED[idx] * (TEN).powi(syndrome.decade) * syndrome.sign
+            if m < n { m } else { Self::near(n * 0.8) }
+        }
     }
 
     fn near(n: Self) -> Self {
@@ -98,10 +75,13 @@ impl R10c for f128 {
             return n;
         }
 
-        let syndrome = Syndrome::new(n);
-        let idx = search(syndrome.locator, &LOWER_BOUNDARIES);
+        if n < 0.0 {
+            -Self::prev(n.abs())
+        } else {
+            let m = Self::near(n);
 
-        PREFERRED[idx] * (TEN).powi(syndrome.decade) * syndrome.sign
+            if m > n { m } else { Self::near(n / 0.8) }
+        }
     }
 }
 

@@ -33,7 +33,7 @@ fn series_request() -> impl Parser<Op> {
             _ => Err(format!("Unknown direction: {s}")),
         });
     let n = positional("N").help("Floating point number.");
-    construct!(Op::Series (direction, n))
+    construct!(Op::Series(direction, n))
 }
 
 fn generate_request() -> impl Parser<Op> {

@@ -3,14 +3,14 @@
 
 #[cfg(feature = "const_calculator")]
 pub mod const_calculator;
+#[cfg(feature = "f128")]
+mod f128;
 #[cfg(feature = "f16")]
 mod f16;
 #[cfg(feature = "f32")]
 mod f32;
 #[cfg(feature = "f64")]
 mod f64;
-#[cfg(feature = "f128")]
-mod f128;
 
 mod sealed {
     pub trait Marker {}
