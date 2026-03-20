@@ -16,6 +16,8 @@ jobs:
     - uses: swatinem/rust-cache@v2
     - uses: extractions/setup-just@v2
     - run: just test
+      env:
+        PROPTEST_DISABLE_FAILURE_PERSISTENCE: "1"
 
   lint:
     name: lint
