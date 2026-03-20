@@ -3,9 +3,14 @@ name = "r10c"
 version = "0.1.0"
 edition = "2024"
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+
 [[bin]]
 name = "r10c"
 required-features = ["cli"]
+
 
 [features]
 cli = ["dep:bpaf", "const_calculator"]
@@ -15,9 +20,12 @@ f16 = []
 f32 = []
 f64 = []
 f128 = []
+wasm = ["dep:wasm-bindgen"]
 
 [dependencies]
 bpaf = { version = "0.9", optional = true }
+wasm-bindgen = { version = "0.2", optional = true }
 
 [dev-dependencies]
 proptest = "1"
+wasm-bindgen-test = "0.3"
