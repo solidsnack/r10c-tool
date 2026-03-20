@@ -3,8 +3,8 @@ use std::ops::Range;
 use proptest::prelude::*;
 use r10c;
 
-const TEN: f64 = 10.0;
-const PREFERRED: [f64; 12] =
+const TEN: f32 = 10.0;
+const PREFERRED: [f32; 12] =
     [0.8, 1.0, 1.25, 1.6, 2.0, 2.5, 3.2, 4.0, 5.0, 6.4, 8.0, 10.0];
 
 fn centered() -> Range<usize> {
@@ -14,7 +14,7 @@ fn centered() -> Range<usize> {
 
 #[test]
 fn zero_is_zero() {
-    let zero: f64 = 0.0;
+    let zero: f32 = 0.0;
 
     assert_eq!(zero, r10c::prev(zero), "Testing: {zero} == prev({zero})");
 
@@ -50,9 +50,9 @@ fn next_preferred() {
 }
 
 fn logspace_sampling(
-    min_magnitude: f64,
-    max_magnitude: f64,
-) -> impl Strategy<Value = f64> {
+    min_magnitude: f32,
+    max_magnitude: f32,
+) -> impl Strategy<Value = f32> {
     let logspace_min = min_magnitude.abs().log10();
     let logspace_max = max_magnitude.abs().log10();
     let is_negative: prop::bool::Any = any::<bool>();
@@ -99,7 +99,7 @@ proptest! {
 
     #[test]
     fn near_between_prev_and_next_full_range(
-        n in logspace_sampling(f64::MIN_POSITIVE, f64::MAX)
+        n in logspace_sampling(f32::MIN_POSITIVE, f32::MAX)
     ) {
         let prev = r10c::prev(n);
         let near = r10c::near(n);
@@ -114,7 +114,7 @@ proptest! {
 
     #[test]
     fn prev_not_greater_full_range(
-        n in logspace_sampling(f64::MIN_POSITIVE, f64::MAX)
+        n in logspace_sampling(f32::MIN_POSITIVE, f32::MAX)
     ) {
         let prev = r10c::prev(n);
 
@@ -126,7 +126,7 @@ proptest! {
 
     #[test]
     fn next_not_less_than_full_range(
-        n in logspace_sampling(f64::MIN_POSITIVE, f64::MAX)
+        n in logspace_sampling(f32::MIN_POSITIVE, f32::MAX)
     ) {
         let next = r10c::prev(n);
 
