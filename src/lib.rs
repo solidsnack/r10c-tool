@@ -11,6 +11,8 @@ mod f16;
 mod f32;
 #[cfg(feature = "f64")]
 mod f64;
+#[cfg(feature = "wasm")]
+mod wasm;
 
 mod sealed {
     pub trait Marker {}

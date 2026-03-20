@@ -34,11 +34,11 @@ impl Syndrome {
         let decade = log10.floor() as i32;
         let locator = log10 - (decade as f16);
 
-        return Syndrome {
+        Syndrome {
             sign,
             locator,
             decade,
-        };
+        }
     }
 }
 

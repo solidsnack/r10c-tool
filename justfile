@@ -13,3 +13,14 @@ bounds:
 
 test:
     cargo test -- --show-output
+
+build:
+    cargo build
+
+wasm target="bundler":
+    #!/bin/bash
+    set -o errexit -o nounset -o pipefail
+
+    mkdir -p tmp/{{target}}
+    wasm-pack build --target {{target}} --out-dir tmp/{{target}} \
+                    --no-default-features --features f64,wasm
