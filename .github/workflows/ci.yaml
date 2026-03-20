@@ -25,6 +25,8 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: dtolnay/rust-toolchain@nightly
+      with:
+        components: rustfmt
     - uses: swatinem/rust-cache@v2
     - uses: extractions/setup-just@v2
     - run: just lint
