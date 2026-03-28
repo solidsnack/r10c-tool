@@ -8,6 +8,8 @@ cycle for every power of ten:
 
 For example, 26 would be rounded to 25 while 30 would be rounded to 32.
 
+The R10c system of preferred numbers is discussed at: http://r10.concepts.onl
+
 # Licensing
 
 This project is copyright the contributors. It is dual-licensed under the

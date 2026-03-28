@@ -1,7 +1,12 @@
 [package]
-name = "r10c"
-version = "0.1.0"
+description = """
+Round numbers on a logarithmic scale, using R10c preferred numbers.
+"""
 edition = "2024"
+license = "MIT OR Apache-2.0"
+name = "r10c"
+repository = "https://github.com/solidsnack/r10c"
+version = "0.1.0"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
