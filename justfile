@@ -5,6 +5,9 @@ lint:
 fmt:
     cargo +nightly fmt
 
+install:
+    cargo install --features cli --path ./
+
 bounds:
     mkdir -p data/bounds/
     cargo run --features cli lower > data/bounds/lower.tsv

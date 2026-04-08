@@ -12,9 +12,9 @@ enum Op {
 
 #[derive(Clone, Debug)]
 enum Direction {
-    Floor,
-    Round,
-    Ceiling,
+    Prev,
+    Near,
+    Next,
 }
 
 fn nearest_request() -> impl Parser<Op> {
@@ -25,11 +25,11 @@ fn nearest_request() -> impl Parser<Op> {
 
 fn series_request() -> impl Parser<Op> {
     let direction = positional("DIRECTION")
-        .help("Rounding operation: floor, round, ceiling")
+        .help("Rounding operation: prev, near, next")
         .parse(|s: String| match s.as_str() {
-            "floor" => Ok(Direction::Floor),
-            "round" => Ok(Direction::Round),
-            "ceiling" => Ok(Direction::Ceiling),
+            "prev" => Ok(Direction::Prev),
+            "near" => Ok(Direction::Near),
+            "next" => Ok(Direction::Next),
             _ => Err(format!("Unknown direction: {s}")),
         });
     let n = positional("N").help("Floating point number.");
@@ -67,9 +67,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
         Op::Series(direction, n) => {
             let r = match direction {
-                Direction::Floor => r10c::prev(n),
-                Direction::Round => r10c::near(n),
-                Direction::Ceiling => r10c::next(n),
+                Direction::Prev => r10c::prev(n),
+                Direction::Near => r10c::near(n),
+                Direction::Next => r10c::next(n),
             };
 
             println!("{r}");
