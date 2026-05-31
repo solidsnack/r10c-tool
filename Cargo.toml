@@ -11,11 +11,9 @@ version = "0.1.0"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-
 [[bin]]
 name = "r10c"
 required-features = ["cli"]
-
 
 [features]
 cli = ["dep:bpaf", "const_calculator"]
@@ -28,6 +26,7 @@ f128 = []
 wasm = ["dep:wasm-bindgen"]
 
 [dependencies]
+bitfield-struct = "0.1"
 bpaf = { version = "0.9", optional = true }
 wasm-bindgen = { version = "0.2", optional = true }
 

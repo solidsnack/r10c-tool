@@ -11,6 +11,9 @@ mod f16;
 mod f32;
 #[cfg(feature = "f64")]
 mod f64;
+mod descriptors;
+#[macro_use]
+mod sign;
 #[cfg(feature = "wasm")]
 mod wasm;
 
