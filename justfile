@@ -8,6 +8,10 @@ fmt:
 install:
     cargo install --features cli --path ./
 
+run *args:
+    cargo run --features cli -- {{args}}
+
+
 bounds:
     mkdir -p data/bounds/
     cargo run --features cli lower > data/bounds/lower.tsv

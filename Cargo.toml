@@ -28,6 +28,7 @@ wasm = ["dep:wasm-bindgen"]
 [dependencies]
 bitfield-struct = "0.1"
 bpaf = { version = "0.9", optional = true }
+delegate = "0.13.5"
 wasm-bindgen = { version = "0.2", optional = true }
 
 [dev-dependencies]

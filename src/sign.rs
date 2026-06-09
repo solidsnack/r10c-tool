@@ -1,5 +1,7 @@
 macro_rules! sign {
-    ($bool:expr) => { if $bool { 1.0 } else { -1.0 }}
+    ($bool:expr) => {
+        if $bool { 1 } else { -1 }
+    };
 }
 
 pub(crate) use sign;

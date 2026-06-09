@@ -1,6 +1,6 @@
 class R10c {
   static near(n) {
-    if (!Number.isFinite(n) || n === 0) return n
+    if (!Number.isFinite(n) || Number.isNaN(n) || n === 0) return n
 
     const preferred = [
       0.8, 1.0, 1.25, 1.6, 2.0, 2.5,
@@ -43,5 +43,23 @@ class R10c {
     }
 
     return preferred[left] * Math.pow(10, decade) * sign
+  }
+
+  static prev(n) {
+    if (!Number.isFinite(n) || Number.isNaN(n) || n === 0) return n
+
+    if (n < 0) return -R10c.next(-n)
+
+    const m = R10c.near(n)
+    return m < n ? m : R10c.near(n * 0.8)
+  }
+
+  static next(n) {
+    if (!Number.isFinite(n) || Number.isNaN(n) || n === 0) return n
+
+    if (n < 0) return -R10c.prev(-n)
+
+    const m = R10c.near(n)
+    return m > n ? m : R10c.near(n / 0.8)
   }
 }
