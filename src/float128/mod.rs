@@ -1,55 +1,17 @@
-use std::num::NonZeroU16;
+pub mod constants;
 
+use constants::*;
 use delegate::delegate;
 
-use crate::bits;
 use crate::descriptors;
+use crate::digit_display::digit_display;
 use crate::sign::sign;
-
-const PREFERRED: [f64; 12] =
-    [0.8, 1.0, 1.25, 1.6, 2.0, 2.5, 3.2, 4.0, 5.0, 6.4, 8.0, 10.0];
-const MID_BOUNDARIES: [f64; 11] = [
-    -0.048455006504028,
-    0.048455006504028,
-    0.150514997831991,
-    0.252574989159953,
-    0.349485002168009,
-    0.451544993495972,
-    0.553604984823934,
-    0.650514997831991,
-    0.752574989159953,
-    0.854634980487915,
-    0.951544993495972,
-];
-const TEN: f64 = 10.0;
-
-mod bounds {
-    /// Coordinates of least R10c value that is greater than or equal
-    /// to: 4.941e-324
-    pub mod smallest {
-        /// The index into `PREFERRED` (so 1 is 1.0, 2 is 1.25, &c).
-        pub const INDEX: usize = 8;
-        /// The smallest floating point number is subnormal -- the exponent is
-        /// smaller than the greatest exponent is large.
-        pub const EXPONENT: isize = -324;
-    }
-    /// Greatest R10c value that is less than or equal to: 1.798e+308
-    pub mod largest {
-        /// The index into `PREFERRED` (so 1 is 1.0, 2 is 1.25, &c).
-        pub const INDEX: usize = 3;
-        pub const EXPONENT: isize = 308;
-    }
-}
 
 #[derive(Clone, Copy, Debug)]
 #[repr(transparent)]
-pub struct Descriptor(NonZeroU16);
+pub struct Descriptor(BackingType);
 
 impl Descriptor {
-    fn lens(&self) -> bits::Lens16 {
-        self.0.get().into()
-    }
-
     delegate! {
         to self {
             /// Resolve the descriptor to a value.
@@ -83,22 +45,62 @@ impl Descriptor {
             pub fn step(&self, distance: isize) -> Option<Self>;
         }
     }
+
+    fn lens(&self) -> LensType {
+        self.0.get().into()
+    }
 }
 
 impl descriptors::Descriptor for Descriptor {
-    type Of = f64;
+    type Of = FloatingType;
+
+    /// Create a descriptor. Use indexes 0, ..., 9.
+    fn of(is_positive: bool, index: usize, exponent: isize) -> Option<Self> {
+        use bounds::*;
+
+        let corrected = index + 1;
+
+        if corrected < 1 || corrected > 10 {
+            return None;
+        }
+
+        match exponent {
+            ..smallest::EXPONENT => None,
+            smallest::EXPONENT if corrected < smallest::INDEX => None,
+            largest::EXPONENT if corrected > largest::INDEX => None,
+            largest::EXPONENT.. if exponent > largest::EXPONENT => None,
+            _ => {
+                let bits = LensType::new()
+                    .with_positive(is_positive)
+                    .with_index(corrected)
+                    .with_exponent(exponent)
+                    .into();
+
+                let non_zero = BackingType::new(bits)?;
+
+                Some(Self(non_zero))
+            }
+        }
+    }
 
     fn significand(&self) -> Self::Of {
-        let sign: Self::Of = sign!(self.lens().positive()).into();
+        let sign: Self::Of = sign!(self.lens().positive());
         sign * PREFERRED[self.lens().index()]
+    }
+
+    fn exponent(&self) -> isize {
+        self.lens().exponent()
     }
 
     fn index(&self) -> usize {
         self.lens().index() - 1
     }
 
-    fn exponent(&self) -> isize {
-        self.lens().exponent()
+    fn text(&self) -> String {
+        // The digits will be "10", "125", "16", "20", "25", &c.
+        let base = PREFERRED_DIGITS[self.lens().index()];
+
+        digit_display(&base, self.lens().exponent())
     }
 
     fn prev(input: Self::Of) -> Option<Self> {
@@ -114,25 +116,23 @@ impl descriptors::Descriptor for Descriptor {
     fn near(input: Self::Of) -> Option<Self> {
         use bounds::*;
 
-        let (index, exponent) =
-            match (input == 0.0, input.is_infinite(), input.is_nan()) {
-                (true, _, _) => return None,
-                (_, true, _) => return None,
-                (_, _, true) => return None,
-                (_, _, _) => {
-                    let abs = input.abs();
-                    let log10 = abs.log10();
-                    let decade = log10.floor() as isize;
-                    let locator = log10 - (decade as f64);
-                    let found = search(locator, &MID_BOUNDARIES);
+        let (index, exponent) = if input.is_normal() {
+            let abs = input.abs();
+            let log10 = abs.log10();
+            let decade = log10.floor() as isize;
+            let locator = log10 - (decade as FloatingType);
+            let found = search(locator, &MID_BOUNDARIES);
 
-                    match found {
-                        0 => (10, decade - 1),
-                        11 => (1, decade + 1),
-                        _ => (found, decade),
-                    }
-                }
+            let pair = match found {
+                0 => (10, decade - 1),
+                11 => (1, decade + 1),
+                _ => (found, decade),
             };
+
+            Some(pair)
+        } else {
+            None
+        }?;
 
         let bounded = match exponent {
             ..smallest::EXPONENT => (smallest::INDEX, smallest::EXPONENT),
@@ -148,15 +148,7 @@ impl descriptors::Descriptor for Descriptor {
             _ => (index, exponent),
         };
 
-        let bits = bits::Lens16::new()
-            .with_positive(input.is_sign_positive())
-            .with_index(bounded.0)
-            .with_exponent(bounded.1)
-            .into();
-
-        let non_zero = NonZeroU16::new(bits)?;
-
-        Some(Self(non_zero))
+        Self::of(input.is_sign_positive(), bounded.0 - 1, bounded.1)
     }
 
     fn next(input: Self::Of) -> Option<Self> {
@@ -170,17 +162,31 @@ impl descriptors::Descriptor for Descriptor {
     }
 
     fn resolve(&self) -> Self::Of {
-        // Split up the exponent so we don't form out of range values as
-        // intermediates.
-        let lo = self.exponent() / 2;
-        let hi = self.exponent() - lo;
+        // NB: Base is biased upwards by one power of ten.
+        let mut accum = PREFERRED[self.lens().index()];
+        let mut exponent = (self.exponent() - 1).abs();
+        let positive_exp = self.exponent().is_positive();
 
-        self.significand() * TEN.powi(lo as i32) * TEN.powi(hi as i32)
+        while exponent > 0 {
+            let step = MAX_TEN_POS_POW.min(exponent);
+
+            if positive_exp {
+                accum *= TEN.powi(step as i32);
+            } else {
+                accum /= TEN.powi(step as i32);
+            }
+
+            exponent -= step;
+        }
+
+        if self.lens().positive() {
+            accum
+        } else {
+            -accum
+        }
     }
 
     fn step(&self, distance: isize) -> Option<Self> {
-        use bounds::*;
-
         let inner = self.lens();
 
         // Logarithm space position.
@@ -188,35 +194,19 @@ impl descriptors::Descriptor for Descriptor {
             (inner.exponent() * 10) + ((inner.index() - 1) as isize);
         let stepped = position + distance;
 
-        // Seperate index and exponent again; translate index back in [1..10].
+        // Seperate index and exponent again; translate index back to [1..10].
         let (index, exponent) = (
             (stepped.rem_euclid(10) as usize) + 1,
             stepped.div_euclid(10),
         );
 
-        match exponent {
-            ..smallest::EXPONENT => None,
-            smallest::EXPONENT if index < smallest::INDEX => None,
-            largest::EXPONENT if index > largest::INDEX => None,
-            largest::EXPONENT.. if exponent > largest::EXPONENT => None,
-            _ => {
-                let bits: u16 = bits::Lens16::new()
-                    .with_positive(inner.positive())
-                    .with_index(index)
-                    .with_exponent(exponent)
-                    .into();
-
-                let non_zero = NonZeroU16::new(bits)?;
-
-                Some(Self(non_zero))
-            }
-        }
+        Self::of(inner.positive(), index - 1, exponent)
     }
 }
 
-impl descriptors::sealed::Marker for f64 {}
+impl descriptors::sealed::Marker for FloatingType {}
 
-impl descriptors::Describable for f64 {
+impl descriptors::Describable for FloatingType {
     type D = Descriptor;
 
     fn prev(self) -> Option<Self::D> {
@@ -238,13 +228,13 @@ impl descriptors::Describable for f64 {
     }
 }
 
-impl From<Descriptor> for f64 {
+impl From<Descriptor> for FloatingType {
     fn from(value: Descriptor) -> Self {
         value.resolve()
     }
 }
 
-const fn search(locator: f64, boundaries: &[f64]) -> usize {
+const fn search(locator: FloatingType, boundaries: &[FloatingType]) -> usize {
     let mut left = 0 as usize;
     let mut right = boundaries.len();
 

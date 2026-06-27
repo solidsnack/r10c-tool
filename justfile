@@ -11,7 +11,6 @@ install:
 run *args:
     cargo run --features cli -- {{args}}
 
-
 bounds:
     mkdir -p data/bounds/
     cargo run --features cli lower > data/bounds/lower.tsv
@@ -21,8 +20,14 @@ bounds:
 test:
     cargo test -- --show-output
 
+test-special:
+    cargo +nightly test --features f16,f128
+
 build:
     cargo build
+
+build-special:
+    cargo +nightly build --features f16,f128
 
 wasm target="bundler":
     #!/bin/bash

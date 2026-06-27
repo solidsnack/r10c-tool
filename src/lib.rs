@@ -5,12 +5,13 @@ pub mod bits;
 #[cfg(feature = "const_calculator")]
 pub mod const_calculator;
 pub mod descriptors;
-// #[cfg(feature = "f128")]
-// pub mod float128;
-// #[cfg(feature = "f16")]
-// pub mod float16;
-// #[cfg(feature = "f32")]
-// pub mod float32;
+pub mod digit_display;
+#[cfg(feature = "f128")]
+pub mod float128;
+#[cfg(feature = "f16")]
+pub mod float16;
+#[cfg(feature = "f32")]
+pub mod float32;
 #[cfg(feature = "f64")]
 pub mod float64;
 #[macro_use]

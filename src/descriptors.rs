@@ -12,7 +12,8 @@
 pub trait Descriptor: Sized {
     type Of: Copy;
 
-    // fn of(index: isize, exponent: isize) -> Option<Self::Of>;
+    /// Create a descriptor. Use indexes 0, ..., 9.
+    fn of(is_positive: bool, index: usize, exponent: isize) -> Option<Self>;
 
     /// Resolve the descriptor to a value.
     fn resolve(&self) -> Self::Of;
@@ -27,6 +28,11 @@ pub trait Descriptor: Sized {
 
     /// The index of the significand in the R10c series, an integer in `[0,9]`.
     fn index(&self) -> usize;
+
+    /// Represent the value as a string. This is simple to do without float
+    /// formatting logic. We just move the decimal point forward or back in the
+    /// according to the decade.
+    fn text(&self) -> String;
 
     /// Obtain a descriptor for the nearest value in the series that is less
     /// than the input value.

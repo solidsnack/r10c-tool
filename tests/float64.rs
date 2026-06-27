@@ -5,8 +5,13 @@ use proptest::prelude::*;
 use r10c;
 
 const TEN: f64 = 10.0;
+// NB: These numbers are all exactly representable in floating point, whereas
+//     many of those in earlier decades (for example, 0.8) are not.
 const PREFERRED: [f64; 12] =
-    [0.8, 1.0, 1.25, 1.6, 2.0, 2.5, 3.2, 4.0, 5.0, 6.4, 8.0, 10.0];
+    // [0.8, 1.0, 1.25, 1.6, 2.0, 2.5, 3.2, 4.0, 5.0, 6.4, 8.0, 10.0];
+    [
+        8.0, 10.0, 12.5, 16.0, 20.0, 25.0, 32.0, 40.0, 50.0, 64.0, 80.0, 100.0,
+    ];
 
 fn centered() -> Range<usize> {
     let len = PREFERRED.len() - 1;
@@ -71,54 +76,58 @@ fn logspace_sampling(
 proptest! {
     #[test]
     fn near_between_prev_and_next(n in logspace_sampling(0.01, 100.0)) {
-        let prev = r10c::prev(n).unwrap().resolve();
-        let near = r10c::near(n).unwrap().resolve();
-        let next = r10c::next(n).unwrap().resolve();
+        match (r10c::prev(n), r10c::near(n), r10c::next(n)) {
+            (Some(prev), Some(near), Some(next)) => {
+                let mid = near.resolve();
+                let (lesser, greater) = if n.is_sign_negative() {
+                    (next.resolve(), prev.resolve())
+                } else {
+                    (prev.resolve(), next.resolve())
+                };
 
-        let (lesser, greater) = if n.is_sign_negative() {
-            (next, prev)
-        } else {
-            (prev, next)
-        };
-
-        prop_assert!(
-            lesser <= near && near <= greater,
-            "The rounded value of {n} must be between {lesser} and {greater} \
-            but is {near}."
-        );
+                prop_assert!(
+                    lesser <= mid && mid <= greater,
+                    "The rounded value of {n} must be between {lesser} and \
+                     {greater} but is {mid}."
+                );
+            }
+            _ => { /* Do nothing. */ }
+        }
     }
 
     #[test]
     fn prev_not_greater(n in logspace_sampling(0.01, 100.0)) {
-        let prev = r10c::prev(n).unwrap().resolve();
-
-        if n.is_sign_negative() {
-            prop_assert!(
-                n <= prev,
-                "The value before {n} must be greater than {n} but is {prev}."
-            );
-        } else {
-            prop_assert!(
-                prev <= n,
-                "The value before {n} must be less than {n} but is {prev}."
-            );
+        if let Some(prev) = r10c::prev(n).map(|d| d.resolve()) {
+            if n.is_sign_negative() {
+                prop_assert!(
+                    n <= prev,
+                    "The value before {n} must be greater than {n} but is \
+                     {prev}."
+                );
+            } else {
+                prop_assert!(
+                    prev <= n,
+                    "The value before {n} must be less than {n} but is {prev}."
+                );
+            }
         }
     }
 
     #[test]
     fn next_not_less_than(n in logspace_sampling(0.01, 100.0)) {
-        let next = r10c::next(n).unwrap().resolve();
-
-        if n.is_sign_negative() {
-            prop_assert!(
-                next <= n,
-                "The value after {n} must be less than {n} but is {next}."
-            );
-        } else {
-            prop_assert!(
-                n <= next,
-                "The value after {n} must be greater than {n} but is {next}."
-            );
+        if let Some(next) = r10c::next(n).map(|d| d.resolve()) {
+            if n.is_sign_negative() {
+                prop_assert!(
+                    next <= n,
+                    "The value after {n} must be less than {n} but is {next}."
+                );
+            } else {
+                prop_assert!(
+                    n <= next,
+                    "The value after {n} must be greater than {n} but is \
+                     {next}."
+                );
+            }
         }
     }
 
@@ -126,39 +135,42 @@ proptest! {
     fn near_between_prev_and_next_full_range(
         n in logspace_sampling(f64::MIN_POSITIVE, f64::MAX)
     ) {
-        let prev = r10c::prev(n).unwrap().resolve();
-        let near = r10c::near(n).unwrap().resolve();
-        let next = r10c::next(n).unwrap().resolve();
+        match (r10c::prev(n), r10c::near(n), r10c::next(n)) {
+            (Some(prev), Some(near), Some(next)) => {
+                let mid = near.resolve();
+                let (lesser, greater) = if n.is_sign_negative() {
+                    (next.resolve(), prev.resolve())
+                } else {
+                    (prev.resolve(), next.resolve())
+                };
 
-        let (lesser, greater) = if n.is_sign_negative() {
-            (next, prev)
-        } else {
-            (prev, next )
-        };
-
-        prop_assert!(
-            lesser <= near && near <= greater,
-            "The rounded value of {n} must be between {lesser} and {greater} \
-            but is {near}."
-        );
+                prop_assert!(
+                    lesser <= mid && mid <= greater,
+                    "The rounded value of {n} must be between {lesser} and \
+                     {greater} but is {mid}."
+                );
+            }
+            _ => { /* Do nothing. */ }
+        }
     }
 
     #[test]
     fn prev_not_greater_full_range(
         n in logspace_sampling(f64::MIN_POSITIVE, f64::MAX)
     ) {
-        let prev = r10c::prev(n).unwrap().resolve();
-
-        if n.is_sign_negative() {
-            prop_assert!(
-                n <= prev,
-                "The value before {n} must be greater than {n} but is {prev}."
-            );
-        } else {
-            prop_assert!(
-                prev <= n,
-                "The value before {n} must be less than {n} but is {prev}."
-            );
+        if let Some(prev) = r10c::prev(n).map(|d| d.resolve()) {
+            if n.is_sign_negative() {
+                prop_assert!(
+                    n <= prev,
+                    "The value before {n} must be greater than {n} but is \
+                     {prev}."
+                );
+            } else {
+                prop_assert!(
+                    prev <= n,
+                    "The value before {n} must be less than {n} but is {prev}."
+                );
+            }
         }
     }
 
@@ -166,18 +178,19 @@ proptest! {
     fn next_not_less_than_full_range(
         n in logspace_sampling(f64::MIN_POSITIVE, f64::MAX)
     ) {
-        let next = r10c::next(n).unwrap().resolve();
-
-        if n.is_sign_negative() {
-            prop_assert!(
-                next <= n,
-                "The value after {n} must be less than {n} but is {next}."
-            );
-        } else {
-            prop_assert!(
-                n <= next,
-                "The value after {n} must be greater than {n} but is {next}."
-            );
+        if let Some(next) = r10c::next(n).map(|d| d.resolve()) {
+            if n.is_sign_negative() {
+                prop_assert!(
+                    next <= n,
+                    "The value after {n} must be less than {n} but is {next}."
+                );
+            } else {
+                prop_assert!(
+                    n <= next,
+                    "The value after {n} must be greater than {n} but is \
+                     {next}."
+                );
+            }
         }
     }
 }

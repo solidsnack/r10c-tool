@@ -8,7 +8,7 @@ pub fn margins_in_log_space() -> Vec<f64> {
     PREFERRED_WITH_MARGIN.map(f64::log10).to_vec()
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum Boundaries {
     Lower,
     Mid,
@@ -17,6 +17,30 @@ pub enum Boundaries {
 
 impl Boundaries {
     pub fn calculate(&self) -> Vec<f64> {
+        use Boundaries::*;
+
+        match self {
+            Lower => margins_in_log_space()
+                .windows(2)
+                .map(|window| window[0])
+                .collect(),
+            Mid => margins_in_log_space()
+                .windows(2)
+                .map(|window| (window[0] + window[1]) / 2.0)
+                .collect(),
+            Upper => margins_in_log_space()
+                .windows(2)
+                .map(|window| window[1].clone())
+                .collect(),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct Roots<Target, Hex>();
+
+impl Roots<f16, u16> {
+    pub fn calculate(&self) -> Vec<u16> {
         use Boundaries::*;
 
         match self {

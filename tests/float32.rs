@@ -1,0 +1,390 @@
+use std::ops::Range;
+use std::str::FromStr;
+
+use assert2::{assert, check};
+use proptest::prelude::*;
+use r10c::{self, descriptors::Descriptor, float32};
+use regex::Regex;
+
+const TEN: f32 = 10.0;
+// NB: These numbers are all exactly representable in floating point, whereas
+//     many of those in earlier decades (for example, 0.8) are not.
+const PREFERRED: [f32; 12] =
+    // [0.8, 1.0, 1.25, 1.6, 2.0, 2.5, 3.2, 4.0, 5.0, 6.4, 8.0, 10.0];
+    [
+        8.0, 10.0, 12.5, 16.0, 20.0, 25.0, 32.0, 40.0, 50.0, 64.0, 80.0, 100.0,
+    ];
+
+fn centered() -> Range<usize> {
+    let len = PREFERRED.len() - 1;
+    1..len
+}
+
+#[test]
+fn near_preferred_is_self() {
+    for i in centered() {
+        let n = PREFERRED[i];
+
+        assert!(
+            let Some(d) = r10c::near(n),
+            "The R10c value {n} should resolve."
+        );
+
+        check!(
+            d.resolve() == n,
+            "The R10c value {n} should resolve to itself: {n} == near({n})"
+        );
+
+        let text = d.text();
+
+        assert!(
+            let Ok(parsed) = f32::from_str(&text),
+            "The descriptor's text display ({text}) should parse to a number"
+        );
+
+        check!(
+            parsed == n,
+            // parsed == n && false,
+            "The descriptor's text display ({text}) should parse to: {n}"
+        );
+    }
+}
+
+#[test]
+fn prev_preferred() {
+    for i in centered() {
+        let other = PREFERRED[i - 1];
+        let n = PREFERRED[i];
+
+        assert!(
+            let Some(d) = r10c::prev(n),
+            "The R10c value {n} should have a previous value."
+        );
+
+        check!(
+            d.resolve() == other,
+            "The previous value in the series should be resolved with \
+             `prev`: {other} == prev({n})"
+        );
+    }
+}
+
+#[test]
+fn next_preferred() {
+    for i in centered() {
+        let other = PREFERRED[i + 1];
+        let n = PREFERRED[i];
+
+        assert!(
+            let Some(d) = r10c::next(n),
+            "The R10c value {n} should have a next value."
+        );
+
+        check!(
+            d.resolve() == other,
+            "The next value in the series should be resolved with \
+             `next`: {other} == next({n})"
+        );
+    }
+}
+
+#[test]
+fn inner_decades_roundtrip() {
+    for exponent in -2..=2 {
+        for index in 0..=9 {
+            assert!(
+                let Some(d) = float32::Descriptor::of(true, index, exponent),
+                "It should be possible to create a descriptor for: \
+                 {exponent}:{index}",
+            );
+
+            let float = d.resolve();
+            let text = d.text();
+
+            assert!(
+                let Ok(parsed) = f32::from_str(&text),
+                "The text display ({text}) of the descriptor for \
+                 {exponent}:{index} should parse to a number but failed."
+            );
+
+            check!(
+                float == parsed,
+                "The text display ({text}) of the descriptor for \
+                 {exponent}:{index} should parse to the float form: \
+                 {float} == {parsed}"
+            );
+        }
+    }
+}
+
+#[test]
+fn inner_decades_leading_decimal_point() {
+    assert!(
+        let Ok(leading_decimal_point) = Regex::new("^[.]"),
+        "Can't parse test regex!",
+    );
+
+    for exponent in -2..=2 {
+        for index in 0..=9 {
+            assert!(
+                let Some(d) = float32::Descriptor::of(true, index, exponent),
+                "It should be possible to create a descriptor for: \
+                 {exponent}:{index}",
+            );
+
+            let text = d.text();
+
+            check!(
+                !leading_decimal_point.is_match(&text),
+                "The text display ({text}) of the descriptor for \
+                 {exponent}:{index} should not start with a decimal point.",
+            );
+        }
+    }
+}
+
+#[test]
+fn inner_decades_trailing_zero() {
+    assert!(
+        let Ok(trailing_zeros) = Regex::new("[.].*0+$"),
+        "Can't parse test regex!",
+    );
+
+    for exponent in -2..=2 {
+        for index in 0..=9 {
+            assert!(
+                let Some(d) = float32::Descriptor::of(true, index, exponent),
+                "It should be possible to create a descriptor for: \
+                 {exponent}:{index}",
+            );
+
+            let text = d.text();
+
+            check!(
+                !trailing_zeros.is_match(&text),
+                "The text display ({text}) of the descriptor for \
+                 {exponent}:{index} should omit trailing zeros.",
+            );
+        }
+    }
+}
+
+#[test]
+fn inner_decades_trailing_decimali_point() {
+    assert!(
+        let Ok(trailing_decimal) = Regex::new("[.]$"),
+        "Can't parse test regex!",
+    );
+
+    for exponent in -2..=2 {
+        for index in 0..=9 {
+            assert!(
+                let Some(d) = float32::Descriptor::of(true, index, exponent),
+                "It should be possible to create a descriptor for: \
+                 {exponent}:{index}",
+            );
+
+            let text = d.text();
+
+            check!(
+                !trailing_decimal.is_match(&text),
+                "The text display ({text}) of the descriptor for \
+                 {exponent}:{index} should omit a trailing decimal point.",
+            );
+        }
+    }
+}
+
+fn logspace_sampling(
+    min_magnitude: f32,
+    max_magnitude: f32,
+) -> impl Strategy<Value = f32> {
+    let logspace_min = min_magnitude.abs().log10();
+    let logspace_max = max_magnitude.abs().log10();
+    let is_negative: prop::bool::Any = any::<bool>();
+
+    (logspace_min..logspace_max, is_negative).prop_map(|(e, is_negative)| {
+        let sign = if is_negative { -1.0 } else { 1.0 };
+        TEN.powf(e) * sign
+    })
+}
+
+proptest! {
+    #[test]
+    fn near_between_prev_and_next(n in logspace_sampling(0.01, 100.0)) {
+        match (r10c::prev(n), r10c::near(n), r10c::next(n)) {
+            (Some(prev), Some(near), Some(next)) => {
+                let mid = near.resolve();
+                let (lesser, greater) = if n.is_sign_negative() {
+                    (next.resolve(), prev.resolve())
+                } else {
+                    (prev.resolve(), next.resolve())
+                };
+
+                prop_assert!(
+                    lesser <= mid && mid <= greater,
+                    "The rounded value of {n} must be between {lesser} and \
+                     {greater} but is {mid}."
+                );
+            }
+            _ => { /* Do nothing. */ }
+        }
+    }
+
+    #[test]
+    fn prev_not_greater(n in logspace_sampling(0.01, 100.0)) {
+        if let Some(prev) = r10c::prev(n).map(|d| d.resolve()) {
+            if n.is_sign_negative() {
+                prop_assert!(
+                    n <= prev,
+                    "The value before {n} must be greater than {n} but is \
+                     {prev}."
+                );
+            } else {
+                prop_assert!(
+                    prev <= n,
+                    "The value before {n} must be less than {n} but is {prev}."
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn next_not_less_than(n in logspace_sampling(0.01, 100.0)) {
+        if let Some(next) = r10c::next(n).map(|d| d.resolve()) {
+            if n.is_sign_negative() {
+                prop_assert!(
+                    next <= n,
+                    "The value after {n} must be less than {n} but is {next}."
+                );
+            } else {
+                prop_assert!(
+                    n <= next,
+                    "The value after {n} must be greater than {n} but is \
+                     {next}."
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn near_between_prev_and_next_full_range(
+        n in logspace_sampling(f32::MIN_POSITIVE, f32::MAX)
+    ) {
+        match (r10c::prev(n), r10c::near(n), r10c::next(n)) {
+            (Some(prev), Some(near), Some(next)) => {
+                let mid = near.resolve();
+                let (lesser, greater) = if n.is_sign_negative() {
+                    (next.resolve(), prev.resolve())
+                } else {
+                    (prev.resolve(), next.resolve())
+                };
+
+                prop_assert!(
+                    lesser <= mid && mid <= greater,
+                    "The rounded value of {n} must be between {lesser} and \
+                     {greater} but is {mid}."
+                );
+            }
+            _ => { /* Do nothing. */ }
+        }
+    }
+
+    #[test]
+    fn prev_not_greater_full_range(
+        n in logspace_sampling(f32::MIN_POSITIVE, f32::MAX)
+    ) {
+        if let Some(prev) = r10c::prev(n).map(|d| d.resolve()) {
+            if n.is_sign_negative() {
+                prop_assert!(
+                    n <= prev,
+                    "The value before {n} must be greater than {n} but is \
+                     {prev}."
+                );
+            } else {
+                prop_assert!(
+                    prev <= n,
+                    "The value before {n} must be less than {n} but is {prev}."
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn next_not_less_than_full_range(
+        n in logspace_sampling(f32::MIN_POSITIVE, f32::MAX)
+    ) {
+        if let Some(next) = r10c::next(n).map(|d| d.resolve()) {
+            if n.is_sign_negative() {
+                prop_assert!(
+                    next <= n,
+                    "The value after {n} must be less than {n} but is {next}."
+                );
+            } else {
+                prop_assert!(
+                    n <= next,
+                    "The value after {n} must be greater than {n} but is \
+                     {next}."
+                );
+            }
+        }
+    }
+}
+
+#[cfg(feature = "exhaustive")]
+mod exhaustive {
+    use assert2::{assert, check};
+
+    // let band: f32 = f32::sqrt(1.25);
+    const BAND: f32 = 1.118033988749895;
+
+    #[test]
+    fn complete_coverage() {
+        for i in 0..=u32::MAX {
+            let n = f32::from_bits(i);
+            let in_r10c = r10c::near(n);
+
+            if n.is_infinite() || n.is_nan() || n == 0.0 {
+                assert!(
+                    let None = in_r10c,
+                    "This should be unresolvable: {n}"
+                );
+            }
+
+            if n.is_normal() {
+                assert!(
+                    let Some(_) = in_r10c,
+                    "Normal number failure: {n}"
+                );
+            }
+
+            if n.is_subnormal() {
+                assert!(
+                    let Some(_) = in_r10c,
+                    "Subnormal number failure: {n}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn normal_nearness() {
+        for i in 0..=u32::MAX {
+            let n = f32::from_bits(i);
+
+            if !n.is_normal() {
+                continue;
+            }
+
+            assert!(
+                let Some(d) = r10c::near(n),
+                "Nearest value should be resolvable for: {n}"
+            );
+
+            let (lower, upper) = (d.resolve() / BAND, d.resolve() * BAND);
+
+            check!(n >= lower);
+            check!(n <= upper);
+        }
+    }
+}

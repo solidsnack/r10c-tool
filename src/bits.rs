@@ -3,7 +3,7 @@
 //! of values can be represented in a small number of bits. The R10c
 //! significand can be stored as an index in the range [0,9] so it only ever
 //! requires 4 bits. With the sign as 1 bit, that leaves 11 bits for the
-//! decimal exponent in a `u16` (more than are need for `f32`) and 27 in a
+//! decimal exponent in a `u16` (more than are needed for `f32`) and 27 in a
 //! `u32` (more than are needed for IEEE `f256`).
 use bitfield_struct::bitfield;
 

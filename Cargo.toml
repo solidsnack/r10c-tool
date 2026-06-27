@@ -19,6 +19,7 @@ required-features = ["cli"]
 cli = ["dep:bpaf", "const_calculator"]
 const_calculator = []
 default = ["f32", "f64"]
+exhaustive = []
 f16 = []
 f32 = []
 f64 = []
@@ -26,9 +27,11 @@ f128 = []
 wasm = ["dep:wasm-bindgen"]
 
 [dependencies]
+assert2 = "0.4"
 bitfield-struct = "0.1"
 bpaf = { version = "0.9", optional = true }
 delegate = "0.13.5"
+regex = "1.12.4"
 wasm-bindgen = { version = "0.2", optional = true }
 
 [dev-dependencies]
