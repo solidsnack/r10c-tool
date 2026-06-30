@@ -7,7 +7,7 @@ use r10c;
 enum Op {
     Nearest(f64),
     Series(Direction, f64),
-    Generate(r10c::const_calculator::Roots),
+    Generate(r10c::const_calculator::Boundaries),
 }
 
 #[derive(Clone, Debug)]
@@ -37,24 +37,12 @@ fn series_request() -> impl Parser<Op> {
 }
 
 fn generate_request() -> impl Parser<Op> {
-    // positional("BOUNDS")
-    //     .help("Name of bounds to generate: lower, mid, upper")
-    //     .parse(|s: String| match s.as_str() {
-    //         "lower" => Ok(r10c::const_calculator::Boundaries::Lower),
-    //         "mid" => Ok(r10c::const_calculator::Boundaries::Mid),
-    //         "upper" => Ok(r10c::const_calculator::Boundaries::Upper),
-    //         _ => Err(format!("Unknown bounds: {s}")),
-    //     })
-    //     .map(Op::Generate)
-    positional("ROOTS")
-        .help("Name of roots to generate: float16, float32, float64, float128")
+    positional("BOUNDS")
+        .help("Name of bounds to generate: lower, mid, upper")
         .parse(|s: String| match s.as_str() {
-            #[cfg(feature = "f16")]
-            "float16" => Ok(r10c::const_calculator::Roots::Float16),
-            "float32" => Ok(r10c::const_calculator::Roots::Float32),
-            "float64" => Ok(r10c::const_calculator::Roots::Float64),
-            #[cfg(feature = "f128")]
-            "float128" => Ok(r10c::const_calculator::Roots::Float128),
+            "lower" => Ok(r10c::const_calculator::Boundaries::Lower),
+            "mid" => Ok(r10c::const_calculator::Boundaries::Mid),
+            "upper" => Ok(r10c::const_calculator::Boundaries::Upper),
             _ => Err(format!("Unknown bounds: {s}")),
         })
         .map(Op::Generate)
@@ -68,6 +56,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     match parsed {
         Op::Nearest(n) => {
+            // let r = r10c::near(n);
             if let Some(d) = r10c::near(n) {
                 let m: f64 = d.into();
 

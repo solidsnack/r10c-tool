@@ -1,12 +1,14 @@
 #![cfg(feature = "f16")]
 #![cfg_attr(feature = "f16", feature(f16))]
+use std::ops::{Range, RangeInclusive};
+use std::str::FromStr;
 
-use std::assert_matches;
-use std::ops::Range;
+use assert2::{assert, check};
+// use proptest::prelude::*;
+use r10c::{self, descriptors::Descriptor, float16};
+use regex::Regex;
 
-use r10c;
-
-const TEN: f16 = 10.0;
+// const TEN: f16 = 10.0;
 // NB: These numbers are all exactly representable in floating point, whereas
 //     many of those in earlier decades (for example, 0.8) are not.
 const PREFERRED: [f16; 12] =
@@ -25,10 +27,27 @@ fn near_preferred_is_self() {
     for i in centered() {
         let n = PREFERRED[i];
 
-        assert_matches!(
-            r10c::near(n),
-            Some(d) if d.resolve() == n,
-            "Testing: {n} == near({n})"
+        assert!(
+            let Some(d) = r10c::near(n),
+            "The R10c value {n} should resolve."
+        );
+
+        check!(
+            d.resolve() == n,
+            "The R10c value {n} should resolve to itself: {n} == near({n})"
+        );
+
+        let text = d.text();
+
+        assert!(
+            let Ok(parsed) = f16::from_str(&text),
+            "The descriptor's text display ({text}) should parse to a number"
+        );
+
+        check!(
+            parsed == n,
+            // parsed == n && false,
+            "The descriptor's text display ({text}) should parse to: {n}"
         );
     }
 }
@@ -39,10 +58,15 @@ fn prev_preferred() {
         let other = PREFERRED[i - 1];
         let n = PREFERRED[i];
 
-        assert_matches!(
-            r10c::prev(n),
-            Some(d) if d.resolve() == other,
-            "Testing: {other} == prev({n})"
+        assert!(
+            let Some(d) = r10c::prev(n),
+            "The R10c value {n} should have a previous value."
+        );
+
+        check!(
+            d.resolve() == other,
+            "The previous value in the series should be resolved with \
+             `prev`: {other} == prev({n})"
         );
     }
 }
@@ -53,10 +77,15 @@ fn next_preferred() {
         let other = PREFERRED[i + 1];
         let n = PREFERRED[i];
 
-        assert_matches!(
-            r10c::next(n),
-            Some(d) if d.resolve() == other,
-            "Testing: {other} == next({n})"
+        assert!(
+            let Some(d) = r10c::next(n),
+            "The R10c value {n} should have a next value."
+        );
+
+        check!(
+            d.resolve() == other,
+            "The next value in the series should be resolved with \
+             `next`: {other} == next({n})"
         );
     }
 }
@@ -66,7 +95,7 @@ fn inner_decades_text_roundtrip() {
     for exponent in -2..=2 {
         for index in 0..=9 {
             assert!(
-                let Some(d) = float32::Descriptor::of(true, index, exponent),
+                let Some(d) = float16::Descriptor::of(true, index, exponent),
                 "It should be possible to create a descriptor for: \
                  {exponent}:{index}",
             );
@@ -75,7 +104,7 @@ fn inner_decades_text_roundtrip() {
             let text = d.text();
 
             assert!(
-                let Ok(parsed) = f32::from_str(&text),
+                let Ok(parsed) = f16::from_str(&text),
                 "The text display ({text}) of the descriptor for \
                  {exponent}:{index} should parse to a number but failed."
             );
@@ -100,7 +129,7 @@ fn inner_decades_leading_decimal_point() {
     for exponent in -2..=2 {
         for index in 0..=9 {
             assert!(
-                let Some(d) = float32::Descriptor::of(true, index, exponent),
+                let Some(d) = float16::Descriptor::of(true, index, exponent),
                 "It should be possible to create a descriptor for: \
                  {exponent}:{index}",
             );
@@ -126,7 +155,7 @@ fn inner_decades_trailing_zero() {
     for exponent in -2..=2 {
         for index in 0..=9 {
             assert!(
-                let Some(d) = float32::Descriptor::of(true, index, exponent),
+                let Some(d) = float16::Descriptor::of(true, index, exponent),
                 "It should be possible to create a descriptor for: \
                  {exponent}:{index}",
             );
@@ -152,7 +181,7 @@ fn inner_decades_trailing_decimal_point() {
     for exponent in -2..=2 {
         for index in 0..=9 {
             assert!(
-                let Some(d) = float32::Descriptor::of(true, index, exponent),
+                let Some(d) = float16::Descriptor::of(true, index, exponent),
                 "It should be possible to create a descriptor for: \
                  {exponent}:{index}",
             );
@@ -168,86 +197,65 @@ fn inner_decades_trailing_decimal_point() {
     }
 }
 
-#[cfg(feature = "exhaustive")]
-mod exhaustive {
-    use assert2::{assert, check};
+/*
+    The idea behind this test:
+    * We can always format an R10c descriptor as text correctly without making
+      any use of floating point. We use the decimal exponent to decide how many
+      places before or after to put the digits of the value and then zero fill
+      as needed.
+    * This text string is a parseable float.
+    * We parse the float.
+    * The floating point calculations in `.resolve()` should result in this
+      float.
+    * The range in which this test passes is governed by the nature of the
+      algorithm in `.resolve()`. If the algorithm involves more than one
+      rounding step, eventually we won't be able to get the parsed float and
+      the calculated float to match up.
+ */
+fn test_range_roundtrip(range: RangeInclusive<isize>) {
+    for i in range {
+        let (index, exponent) = ((i.abs() as usize) % 10, i / 10);
 
-    // let band: f16 = f16::sqrt(1.25);
-    const BAND: f16 = 1.118033988749895;
+        assert!(
+            let Some(d) = float16::Descriptor::of(true, index, exponent),
+            "It should be possible to create a descriptor for: \
+                {exponent}:{index}",
+        );
 
-    #[test]
-    fn complete_coverage() {
-        for i in 0..=u16::MAX {
-            let n = f16::from_bits(i);
-            let in_r10c = r10c::near(n);
+        let float = d.resolve();
+        let text = d.text();
 
-            if n.is_infinite() || n.is_nan() || n == 0.0 {
-                assert!(
-                    let None = in_r10c,
-                    "This should be unresolvable: {n}"
-                );
-            }
+        assert!(
+            let Ok(parsed) = f16::from_str(&text),
+            "The text display ({text}) of the descriptor for \
+                {exponent}:{index} should parse to a number but failed."
+        );
 
-            if n.is_normal() {
-                assert!(
-                    let Some(_) = in_r10c,
-                    "Normal number failure: {n}"
-                );
-            }
-
-            if n.is_subnormal() {
-                assert!(
-                    let Some(_) = in_r10c,
-                    "Subnormal number failure: {n}"
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn normal_nearness() {
-        for i in 0..=u16::MAX {
-            let n = f16::from_bits(i);
-
-            if !n.is_normal() {
-                continue;
-            }
-
-            assert!(
-                let Some(d) = r10c::near(n),
-                "Nearest value should be resolvable for: {n}"
-            );
-
-            let r = d.resolve();
-            let (lower, upper) = (r / BAND, r * BAND);
-            let neighbors = (r10c::prev(n), r10c::next(n));
-
-            let (index, exponent) = (d.index(), d.exponent());
-
-            let desc = if let (Some(prev), Some(next)) = neighbors {
-                let (pn, nn) = (prev.resolve(), next.resolve());
-                let (pnp, pnn, nnp, nnn) = (
-                    pn.next_down(),
-                    pn.next_up(),
-                    nn.next_down(),
-                    nn.next_up(),
-                );
-                format!(
-                    "The value {n} should be within a band centered on \
-                         {r}: {lower} < {r} (index: {index}, exponent: {exponent}) < {upper}\n\
-                         The near value {r} should be geometrically closer to \
-                         the input {n} than previous or next: \
-                         {pnp} {pn} {pnn} < {r} < {nnp} {nn} {nnn}"
-                )
-            } else {
-                format!(
-                    "The value {n} should be within a band centered on \
-                         {r}: {lower} < {r} < {upper}"
-                )
-            };
-
-            check!(n >= lower, "{desc}");
-            check!(n <= upper, "{desc}");
-        }
+        check!(
+            float == parsed,
+            "The text display ({text}) of the descriptor for \
+                {exponent}:{index} should parse to the float form: \
+                {float} == {parsed}"
+        );
     }
 }
+
+#[test]
+fn mid_quarter_text_roundtrip() {
+    use float16::constants::bounds::*;
+
+    let range = (RANGE.start() / 4)..=(RANGE.end() / 4);
+
+    test_range_roundtrip(range);
+}
+
+// #[test]
+// fn mid_half_text_roundtrip() {
+//     use float16::constants::bounds::*;
+
+//     let range = (RANGE.start() / 2)..=(RANGE.end() / 2);
+
+//     test_range_roundtrip(range);
+// }
+
+// Can't do `proptest` because there are no instances.

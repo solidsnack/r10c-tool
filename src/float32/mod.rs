@@ -162,6 +162,24 @@ impl descriptors::Descriptor for Descriptor {
     }
 
     fn resolve(&self) -> Self::Of {
+        /*
+        // Translate from exponent:index form to a:b form, where a is a power
+        // of 2 and b is a power of 5.
+        let d = self.lens().exponent();
+        let i = self.lens().index() - 1;
+        let q =  (i / 3) as isize;
+        let (a, b) = match (self.lens().index() - 1) % 3 {
+            0 => (q + d, d),
+            1 => (q + d - 2, d + 1),
+            _ => (q + d + 3, d - 1),
+        };
+
+        // The midpoint of the array is `5^0`, so we offset into it from the
+        // middle to find `5^b`.
+        let offset = ((FIVES.len() / 2) as isize) + b;
+        let base = FIVES[offset as usize];
+         */
+
         // NB: Base is biased upwards by one power of ten.
         let mut accum = PREFERRED[self.lens().index()];
         let mut exponent = (self.exponent() - 1).abs();

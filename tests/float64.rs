@@ -1,8 +1,10 @@
-use std::assert_matches;
-use std::ops::Range;
+use std::ops::{Range, RangeInclusive};
+use std::str::FromStr;
 
+use assert2::{assert, check};
 use proptest::prelude::*;
-use r10c;
+use r10c::{self, descriptors::Descriptor, float64};
+use regex::Regex;
 
 const TEN: f64 = 10.0;
 // NB: These numbers are all exactly representable in floating point, whereas
@@ -23,10 +25,27 @@ fn near_preferred_is_self() {
     for i in centered() {
         let n = PREFERRED[i];
 
-        assert_matches!(
-            r10c::near(n),
-            Some(d) if d.resolve() == n,
-            "Testing: {n} == near({n})"
+        assert!(
+            let Some(d) = r10c::near(n),
+            "The R10c value {n} should resolve."
+        );
+
+        check!(
+            d.resolve() == n,
+            "The R10c value {n} should resolve to itself: {n} == near({n})"
+        );
+
+        let text = d.text();
+
+        assert!(
+            let Ok(parsed) = f64::from_str(&text),
+            "The descriptor's text display ({text}) should parse to a number"
+        );
+
+        check!(
+            parsed == n,
+            // parsed == n && false,
+            "The descriptor's text display ({text}) should parse to: {n}"
         );
     }
 }
@@ -37,10 +56,15 @@ fn prev_preferred() {
         let other = PREFERRED[i - 1];
         let n = PREFERRED[i];
 
-        assert_matches!(
-            r10c::prev(n),
-            Some(d) if d.resolve() == other,
-            "Testing: {other} == prev({n})"
+        assert!(
+            let Some(d) = r10c::prev(n),
+            "The R10c value {n} should have a previous value."
+        );
+
+        check!(
+            d.resolve() == other,
+            "The previous value in the series should be resolved with \
+             `prev`: {other} == prev({n})"
         );
     }
 }
@@ -51,13 +75,186 @@ fn next_preferred() {
         let other = PREFERRED[i + 1];
         let n = PREFERRED[i];
 
-        assert_matches!(
-            r10c::next(n),
-            Some(d) if d.resolve() == other,
-            "Testing: {other} == next({n})"
+        assert!(
+            let Some(d) = r10c::next(n),
+            "The R10c value {n} should have a next value."
+        );
+
+        check!(
+            d.resolve() == other,
+            "The next value in the series should be resolved with \
+             `next`: {other} == next({n})"
         );
     }
 }
+
+#[test]
+fn inner_decades_text_roundtrip() {
+    for exponent in -2..=2 {
+        for index in 0..=9 {
+            assert!(
+                let Some(d) = float64::Descriptor::of(true, index, exponent),
+                "It should be possible to create a descriptor for: \
+                 {exponent}:{index}",
+            );
+
+            let float = d.resolve();
+            let text = d.text();
+
+            assert!(
+                let Ok(parsed) = f64::from_str(&text),
+                "The text display ({text}) of the descriptor for \
+                 {exponent}:{index} should parse to a number but failed."
+            );
+
+            check!(
+                float == parsed,
+                "The text display ({text}) of the descriptor for \
+                 {exponent}:{index} should parse to the float form: \
+                 {float} == {parsed}"
+            );
+        }
+    }
+}
+
+#[test]
+fn inner_decades_leading_decimal_point() {
+    assert!(
+        let Ok(leading_decimal_point) = Regex::new("^[.]"),
+        "Can't parse test regex!",
+    );
+
+    for exponent in -2..=2 {
+        for index in 0..=9 {
+            assert!(
+                let Some(d) = float64::Descriptor::of(true, index, exponent),
+                "It should be possible to create a descriptor for: \
+                 {exponent}:{index}",
+            );
+
+            let text = d.text();
+
+            check!(
+                !leading_decimal_point.is_match(&text),
+                "The text display ({text}) of the descriptor for \
+                 {exponent}:{index} should not start with a decimal point.",
+            );
+        }
+    }
+}
+
+#[test]
+fn inner_decades_trailing_zero() {
+    assert!(
+        let Ok(trailing_zeros) = Regex::new("[.].*0+$"),
+        "Can't parse test regex!",
+    );
+
+    for exponent in -2..=2 {
+        for index in 0..=9 {
+            assert!(
+                let Some(d) = float64::Descriptor::of(true, index, exponent),
+                "It should be possible to create a descriptor for: \
+                 {exponent}:{index}",
+            );
+
+            let text = d.text();
+
+            check!(
+                !trailing_zeros.is_match(&text),
+                "The text display ({text}) of the descriptor for \
+                 {exponent}:{index} should omit trailing zeros.",
+            );
+        }
+    }
+}
+
+#[test]
+fn inner_decades_trailing_decimal_point() {
+    assert!(
+        let Ok(trailing_decimal) = Regex::new("[.]$"),
+        "Can't parse test regex!",
+    );
+
+    for exponent in -2..=2 {
+        for index in 0..=9 {
+            assert!(
+                let Some(d) = float64::Descriptor::of(true, index, exponent),
+                "It should be possible to create a descriptor for: \
+                 {exponent}:{index}",
+            );
+
+            let text = d.text();
+
+            check!(
+                !trailing_decimal.is_match(&text),
+                "The text display ({text}) of the descriptor for \
+                 {exponent}:{index} should omit a trailing decimal point.",
+            );
+        }
+    }
+}
+
+/*
+    The idea behind this test:
+    * We can always format an R10c descriptor as text correctly without making
+      any use of floating point. We use the decimal exponent to decide how many
+      places before or after to put the digits of the value and then zero fill
+      as needed.
+    * This text string is a parseable float.
+    * We parse the float.
+    * The floating point calculations in `.resolve()` should result in this
+      float.
+    * The range in which this test passes is governed by the nature of the
+      algorithm in `.resolve()`. If the algorithm involves more than one
+      rounding step, eventually we won't be able to get the parsed float and
+      the calculated float to match up.
+ */
+fn test_range_roundtrip(range: RangeInclusive<isize>) {
+    for i in range {
+        let (index, exponent) = ((i.abs() as usize) % 10, i / 10);
+
+        assert!(
+            let Some(d) = float64::Descriptor::of(true, index, exponent),
+            "It should be possible to create a descriptor for: \
+                {exponent}:{index}",
+        );
+
+        let float = d.resolve();
+        let text = d.text();
+
+        assert!(
+            let Ok(parsed) = f64::from_str(&text),
+            "The text display ({text}) of the descriptor for \
+                {exponent}:{index} should parse to a number but failed."
+        );
+
+        check!(
+            float == parsed,
+            "The text display ({text}) of the descriptor for \
+                {exponent}:{index} should parse to the float form: \
+                {float} == {parsed}"
+        );
+    }
+}
+
+#[test]
+fn mid_portion_text_roundtrip() {
+    use float64::constants::bounds::*;
+
+    let range = (RANGE.start() / 16)..=(RANGE.end() / 16);
+
+    test_range_roundtrip(range);
+}
+
+// #[test]
+// fn mid_half_text_roundtrip() {
+//     use float64::constants::bounds::*;
+
+//     let range = (RANGE.start() / 2)..=(RANGE.end() / 2);
+
+//     test_range_roundtrip(range);
+// }
 
 fn logspace_sampling(
     min_magnitude: f64,

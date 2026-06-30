@@ -1,4 +1,4 @@
-use std::ops::Range;
+use std::ops::{Range, RangeInclusive};
 use std::str::FromStr;
 
 use assert2::{assert, check};
@@ -195,36 +195,65 @@ fn inner_decades_trailing_decimal_point() {
     }
 }
 
-// #[test]
+/*
+    The idea behind this test:
+    * We can always format an R10c descriptor as text correctly without making
+      any use of floating point. We use the decimal exponent to decide how many
+      places before or after to put the digits of the value and then zero fill
+      as needed.
+    * This text string is a parseable float.
+    * We parse the float.
+    * The floating point calculations in `.resolve()` should result in this
+      float.
+    * The range in which this test passes is governed by the nature of the
+      algorithm in `.resolve()`. If the algorithm involves more than one
+      rounding step, eventually we won't be able to get the parsed float and
+      the calculated float to match up.
+ */
+fn test_range_roundtrip(range: RangeInclusive<isize>) {
+    for i in range {
+        let (index, exponent) = ((i.abs() as usize) % 10, i / 10);
 
-// fn text_roundtrip() {
+        assert!(
+            let Some(d) = float32::Descriptor::of(true, index, exponent),
+            "It should be possible to create a descriptor for: \
+                {exponent}:{index}",
+        );
+
+        let float = d.resolve();
+        let text = d.text();
+
+        assert!(
+            let Ok(parsed) = f32::from_str(&text),
+            "The text display ({text}) of the descriptor for \
+                {exponent}:{index} should parse to a number but failed."
+        );
+
+        check!(
+            float == parsed,
+            "The text display ({text}) of the descriptor for \
+                {exponent}:{index} should parse to the float form: \
+                {float} == {parsed}"
+        );
+    }
+}
+
+#[test]
+fn mid_portion_text_roundtrip() {
+    use float32::constants::bounds::*;
+
+    let range = (RANGE.start() / 4)..=(RANGE.end() / 4);
+
+    test_range_roundtrip(range);
+}
+
+// #[test]
+// fn mid_half_text_roundtrip() {
 //     use float32::constants::bounds::*;
 
-//     for i in RANGE {
-//         let (index, exponent) = ((i.abs() as usize) % 10, i / 10);
+//     let range = (RANGE.start() / 2)..=(RANGE.end() / 2);
 
-//         assert!(
-//             let Some(d) = float32::Descriptor::of(true, index, exponent),
-//             "It should be possible to create a descriptor for: \
-//                 {exponent}:{index}",
-//         );
-
-//         let float = d.resolve();
-//         let text = d.text();
-
-//         assert!(
-//             let Ok(parsed) = f32::from_str(&text),
-//             "The text display ({text}) of the descriptor for \
-//                 {exponent}:{index} should parse to a number but failed."
-//         );
-
-//         check!(
-//             float == parsed,
-//             "The text display ({text}) of the descriptor for \
-//                 {exponent}:{index} should parse to the float form: \
-//                 {float} == {parsed}"
-//         );
-//     }
+//     test_range_roundtrip(range);
 // }
 
 fn logspace_sampling(
