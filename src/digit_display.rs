@@ -6,6 +6,8 @@ pub fn digit_display<S: AsRef<str> + ?Sized>(
     // behind the decimal place (after `0.``); position -2 means they start
     // after `0.0` and so on; the position can be thought of as the exponent.
     position: isize,
+    // Whether the number is positive or negative.
+    is_positive: bool,
 ) -> String {
     let trimmed: String = digits
         .as_ref()
@@ -17,6 +19,10 @@ pub fn digit_display<S: AsRef<str> + ?Sized>(
     let nonzero = 0..(trimmed.len() as isize);
 
     let mut accum = String::new();
+
+    if !is_positive {
+        accum.push_str("-");
+    }
 
     for i in start..end {
         let digit = if nonzero.contains(&i) {

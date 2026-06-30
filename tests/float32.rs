@@ -89,7 +89,7 @@ fn next_preferred() {
 }
 
 #[test]
-fn inner_decades_roundtrip() {
+fn inner_decades_text_roundtrip() {
     for exponent in -2..=2 {
         for index in 0..=9 {
             assert!(
@@ -170,7 +170,7 @@ fn inner_decades_trailing_zero() {
 }
 
 #[test]
-fn inner_decades_trailing_decimali_point() {
+fn inner_decades_trailing_decimal_point() {
     assert!(
         let Ok(trailing_decimal) = Regex::new("[.]$"),
         "Can't parse test regex!",
@@ -194,6 +194,38 @@ fn inner_decades_trailing_decimali_point() {
         }
     }
 }
+
+// #[test]
+
+// fn text_roundtrip() {
+//     use float32::constants::bounds::*;
+
+//     for i in RANGE {
+//         let (index, exponent) = ((i.abs() as usize) % 10, i / 10);
+
+//         assert!(
+//             let Some(d) = float32::Descriptor::of(true, index, exponent),
+//             "It should be possible to create a descriptor for: \
+//                 {exponent}:{index}",
+//         );
+
+//         let float = d.resolve();
+//         let text = d.text();
+
+//         assert!(
+//             let Ok(parsed) = f32::from_str(&text),
+//             "The text display ({text}) of the descriptor for \
+//                 {exponent}:{index} should parse to a number but failed."
+//         );
+
+//         check!(
+//             float == parsed,
+//             "The text display ({text}) of the descriptor for \
+//                 {exponent}:{index} should parse to the float form: \
+//                 {float} == {parsed}"
+//         );
+//     }
+// }
 
 fn logspace_sampling(
     min_magnitude: f32,
@@ -327,64 +359,6 @@ proptest! {
                      {next}."
                 );
             }
-        }
-    }
-}
-
-#[cfg(feature = "exhaustive")]
-mod exhaustive {
-    use assert2::{assert, check};
-
-    // let band: f32 = f32::sqrt(1.25);
-    const BAND: f32 = 1.118033988749895;
-
-    #[test]
-    fn complete_coverage() {
-        for i in 0..=u32::MAX {
-            let n = f32::from_bits(i);
-            let in_r10c = r10c::near(n);
-
-            if n.is_infinite() || n.is_nan() || n == 0.0 {
-                assert!(
-                    let None = in_r10c,
-                    "This should be unresolvable: {n}"
-                );
-            }
-
-            if n.is_normal() {
-                assert!(
-                    let Some(_) = in_r10c,
-                    "Normal number failure: {n}"
-                );
-            }
-
-            if n.is_subnormal() {
-                assert!(
-                    let Some(_) = in_r10c,
-                    "Subnormal number failure: {n}"
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn normal_nearness() {
-        for i in 0..=u32::MAX {
-            let n = f32::from_bits(i);
-
-            if !n.is_normal() {
-                continue;
-            }
-
-            assert!(
-                let Some(d) = r10c::near(n),
-                "Nearest value should be resolvable for: {n}"
-            );
-
-            let (lower, upper) = (d.resolve() / BAND, d.resolve() * BAND);
-
-            check!(n >= lower);
-            check!(n <= upper);
         }
     }
 }

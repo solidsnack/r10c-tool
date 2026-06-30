@@ -26,8 +26,12 @@ test-special:
 build:
     cargo build
 
+build-cli:
+    cargo build --features cli
+
 build-special:
     cargo +nightly build --features f16,f128
+    cargo +nightly build --features cli,f16,f128
 
 wasm target="bundler":
     #!/bin/bash

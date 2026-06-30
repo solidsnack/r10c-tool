@@ -8,6 +8,8 @@ pub use crate::bits::Lens32 as LensType;
 pub const MAX_TEN_POS_POW: isize = 48;
 
 pub mod bounds {
+    use std::ops::RangeInclusive;
+
     /// Coordinates of least R10c value that is greater than or equal to the
     /// least positive value of this floating point type.
     pub mod smallest {
@@ -24,6 +26,14 @@ pub mod bounds {
         pub const INDEX: usize = 1;
         pub const EXPONENT: isize = 4932;
     }
+
+    // Uses a notation where exponent is the tens, hundreds, &c, place, and index
+    // is the ones place.
+    const LO: isize =
+        (smallest::EXPONENT * 10) + (-(smallest::INDEX as isize) + 1);
+    const HI: isize =
+        (largest::EXPONENT * 10) + ((largest::INDEX as isize) - 1);
+    pub const RANGE: RangeInclusive<isize> = LO..=HI;
 }
 
 // NB: These numbers are all exactly representable in floating point, whereas
@@ -34,8 +44,9 @@ pub const PREFERRED: [FloatingType; 12] =
         8.0, 10.0, 12.5, 16.0, 20.0, 25.0, 32.0, 40.0, 50.0, 64.0, 80.0, 100.0,
     ];
 
-pub const PREFERRED_DIGITS: [&str; 12] =
-    ["8", "1", "125", "16", "20", "25", "32", "40", "50", "64", "80", "100"];
+pub const PREFERRED_DIGITS: [&str; 12] = [
+    "8", "1", "125", "16", "20", "25", "32", "40", "50", "64", "80", "100",
+];
 
 pub const MID_BOUNDARIES: [FloatingType; 11] = [
     -0.048455006504028,

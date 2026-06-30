@@ -61,6 +61,113 @@ fn next_preferred() {
     }
 }
 
+#[test]
+fn inner_decades_text_roundtrip() {
+    for exponent in -2..=2 {
+        for index in 0..=9 {
+            assert!(
+                let Some(d) = float32::Descriptor::of(true, index, exponent),
+                "It should be possible to create a descriptor for: \
+                 {exponent}:{index}",
+            );
+
+            let float = d.resolve();
+            let text = d.text();
+
+            assert!(
+                let Ok(parsed) = f32::from_str(&text),
+                "The text display ({text}) of the descriptor for \
+                 {exponent}:{index} should parse to a number but failed."
+            );
+
+            check!(
+                float == parsed,
+                "The text display ({text}) of the descriptor for \
+                 {exponent}:{index} should parse to the float form: \
+                 {float} == {parsed}"
+            );
+        }
+    }
+}
+
+#[test]
+fn inner_decades_leading_decimal_point() {
+    assert!(
+        let Ok(leading_decimal_point) = Regex::new("^[.]"),
+        "Can't parse test regex!",
+    );
+
+    for exponent in -2..=2 {
+        for index in 0..=9 {
+            assert!(
+                let Some(d) = float32::Descriptor::of(true, index, exponent),
+                "It should be possible to create a descriptor for: \
+                 {exponent}:{index}",
+            );
+
+            let text = d.text();
+
+            check!(
+                !leading_decimal_point.is_match(&text),
+                "The text display ({text}) of the descriptor for \
+                 {exponent}:{index} should not start with a decimal point.",
+            );
+        }
+    }
+}
+
+#[test]
+fn inner_decades_trailing_zero() {
+    assert!(
+        let Ok(trailing_zeros) = Regex::new("[.].*0+$"),
+        "Can't parse test regex!",
+    );
+
+    for exponent in -2..=2 {
+        for index in 0..=9 {
+            assert!(
+                let Some(d) = float32::Descriptor::of(true, index, exponent),
+                "It should be possible to create a descriptor for: \
+                 {exponent}:{index}",
+            );
+
+            let text = d.text();
+
+            check!(
+                !trailing_zeros.is_match(&text),
+                "The text display ({text}) of the descriptor for \
+                 {exponent}:{index} should omit trailing zeros.",
+            );
+        }
+    }
+}
+
+#[test]
+fn inner_decades_trailing_decimal_point() {
+    assert!(
+        let Ok(trailing_decimal) = Regex::new("[.]$"),
+        "Can't parse test regex!",
+    );
+
+    for exponent in -2..=2 {
+        for index in 0..=9 {
+            assert!(
+                let Some(d) = float32::Descriptor::of(true, index, exponent),
+                "It should be possible to create a descriptor for: \
+                 {exponent}:{index}",
+            );
+
+            let text = d.text();
+
+            check!(
+                !trailing_decimal.is_match(&text),
+                "The text display ({text}) of the descriptor for \
+                 {exponent}:{index} should omit a trailing decimal point.",
+            );
+        }
+    }
+}
+
 #[cfg(feature = "exhaustive")]
 mod exhaustive {
     use assert2::{assert, check};

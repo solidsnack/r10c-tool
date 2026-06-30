@@ -100,7 +100,7 @@ impl descriptors::Descriptor for Descriptor {
         // The digits will be "10", "125", "16", "20", "25", &c.
         let base = PREFERRED_DIGITS[self.lens().index()];
 
-        digit_display(&base, self.lens().exponent())
+        digit_display(&base, self.lens().exponent(), self.lens().positive())
     }
 
     fn prev(input: Self::Of) -> Option<Self> {
@@ -194,13 +194,13 @@ impl descriptors::Descriptor for Descriptor {
             (inner.exponent() * 10) + ((inner.index() - 1) as isize);
         let stepped = position + distance;
 
-        // Seperate index and exponent again; translate index back to [1..10].
+        // Seperate index and exponent again.
         let (index, exponent) = (
-            (stepped.rem_euclid(10) as usize) + 1,
+            (stepped.rem_euclid(10) as usize),
             stepped.div_euclid(10),
         );
 
-        Self::of(inner.positive(), index - 1, exponent)
+        Self::of(inner.positive(), index, exponent)
     }
 }
 
