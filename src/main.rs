@@ -1,4 +1,4 @@
-use std::error::Error;
+use std::{error::Error, process::exit};
 
 use bpaf::*;
 use r10c;
@@ -56,9 +56,16 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     match parsed {
         Op::Nearest(n) => {
-            let r = r10c::near(n);
+            // let r = r10c::near(n);
+            if let Some(d) = r10c::near(n) {
+                let m: f64 = d.into();
 
-            println!("{r}");
+                println!("{m}");
+            } else {
+                eprintln!("This value is not resolvable: {n}");
+                eprintln!("R10c can not resolve zero, NaN or infinities.");
+                exit(1);
+            };
         }
         Op::Generate(bounds) => {
             for n in bounds.calculate() {
@@ -72,7 +79,13 @@ fn main() -> Result<(), Box<dyn Error>> {
                 Direction::Next => r10c::next(n),
             };
 
-            println!("{r}");
+            if let Some(d) = r {
+                println!("{}", d.resolve());
+            } else {
+                eprintln!("This value is not resolvable: {n}");
+                eprintln!("R10c can not resolve zero, NaN or infinities.");
+                exit(1);
+            }
         }
     }
 

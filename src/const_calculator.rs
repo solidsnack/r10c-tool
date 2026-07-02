@@ -8,7 +8,7 @@ pub fn margins_in_log_space() -> Vec<f64> {
     PREFERRED_WITH_MARGIN.map(f64::log10).to_vec()
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum Boundaries {
     Lower,
     Mid,

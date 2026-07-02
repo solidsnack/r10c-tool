@@ -30,3 +30,40 @@ jobs:
     - uses: swatinem/rust-cache@v2
     - uses: extractions/setup-just@v2
     - run: just lint
+
+  test-special:
+    name: test-special
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@nightly
+    - uses: swatinem/rust-cache@v2
+    - uses: extractions/setup-just@v2
+    - run: just test-special
+      env:
+        PROPTEST_DISABLE_FAILURE_PERSISTENCE: "1"
+
+  build-cli:
+    name: build-cli
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@stable
+    - uses: swatinem/rust-cache@v2
+    - uses: extractions/setup-just@v2
+    - run: just build-cli
+
+  build-special:
+    name: build-special
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: taiki-e/install-action@v2
+      with:
+        tool: wasm-pack
+    - uses: dtolnay/rust-toolchain@nightly
+      with:
+        targets: wasm32-unknown-unknown
+    - uses: swatinem/rust-cache@v2
+    - uses: extractions/setup-just@v2
+    - run: just build-special
