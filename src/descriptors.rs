@@ -67,6 +67,7 @@ pub(crate) mod sealed {
 /// A convenient trait, intended to support the free functions of this module.
 pub trait Describable: Copy + sealed::Marker {
     type D: Descriptor<Of = Self>;
+
     fn prev(self) -> Option<Self::D>;
 
     fn near(self) -> Option<Self::D>;

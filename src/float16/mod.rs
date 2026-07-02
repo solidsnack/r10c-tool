@@ -34,6 +34,12 @@ impl Descriptor {
             #[through(descriptors::Descriptor)]
             pub fn index(&self) -> usize;
 
+            /// Represent the value as a string. This is simple to do without
+            /// float formatting logic. We just move the decimal point forward
+            /// or back in the according to the decade.
+            #[through(descriptors::Descriptor)]
+            pub fn text(&self) -> String;
+
             /// Produce a new descriptor that resolves to a value `distance`
             /// steps before or after this descriptor. Stepping may fail if the
             /// resulting value is out of range for the target numeric type.
@@ -195,10 +201,8 @@ impl descriptors::Descriptor for Descriptor {
         let stepped = position + distance;
 
         // Seperate index and exponent again.
-        let (index, exponent) = (
-            (stepped.rem_euclid(10) as usize),
-            stepped.div_euclid(10),
-        );
+        let (index, exponent) =
+            ((stepped.rem_euclid(10) as usize), stepped.div_euclid(10));
 
         Self::of(inner.positive(), index, exponent)
     }
