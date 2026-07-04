@@ -1,5 +1,7 @@
 pub mod constants;
 
+use std::num::NonZero;
+
 use constants::*;
 use delegate::delegate;
 
@@ -7,9 +9,9 @@ use crate::descriptors;
 use crate::digit_display::digit_display;
 use crate::sign::sign;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 #[repr(transparent)]
-pub struct Descriptor(BackingType);
+pub struct Descriptor(NonZero<BackingType>);
 
 impl Descriptor {
     delegate! {
@@ -57,6 +59,26 @@ impl Descriptor {
     }
 }
 
+impl From<Descriptor> for BackingType {
+    fn from(value: Descriptor) -> Self {
+        value.0.into()
+    }
+}
+
+impl TryFrom<BackingType> for Descriptor {
+    type Error = ();
+
+    fn try_from(value: BackingType) -> Result<Self, Self::Error> {
+        let lens = LensType::from(value);
+        let positive = lens.positive();
+        let index = lens.index().checked_sub(1).ok_or(())?;
+        let exponent = lens.exponent();
+
+        <Self as descriptors::Descriptor>::of(positive, index, exponent)
+            .ok_or(())
+    }
+}
+
 impl descriptors::Descriptor for Descriptor {
     type Of = FloatingType;
 
@@ -82,7 +104,7 @@ impl descriptors::Descriptor for Descriptor {
                     .with_exponent(exponent)
                     .into();
 
-                let non_zero = BackingType::new(bits)?;
+                let non_zero = NonZero::<BackingType>::new(bits)?;
 
                 Some(Self(non_zero))
             }
