@@ -1,0 +1,3 @@
+
+test:
+    deno run --allow-read test.js
