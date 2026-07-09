@@ -16,6 +16,8 @@ pub mod float32;
 pub mod float64;
 #[macro_use]
 mod sign;
+#[cfg(feature = "typst")]
+mod typst;
 #[cfg(feature = "wasm")]
 mod wasm;
 
