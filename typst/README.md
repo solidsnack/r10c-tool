@@ -34,6 +34,24 @@ For example:
 #r10c.resolve(r10c.step(base, -1)) // 3.2
 ```
 
+### Lengths
+
+Each function also accepts a `length` in place of a number or descriptor. The
+length is rounded by its millimetre magnitude and the result is handed back as
+a length in millimetres. For example:
+
+```typst
+#import "@local/r10c:0.1.0"
+
+#let base = r10c.near(4mm)   // 4mm
+#r10c.step(base, 1)          // 5mm
+#r10c.step(base, -1)         // 3.2mm
+```
+
+`resolve` accepts a length too, snapping it to the nearest series value. Note
+that a length carrying `em` units cannot be rounded (Typst's `.mm()` rejects
+it).
+
 ## Vendoring
 
 This is a small package and can be easily vendored: copy `lib.typ` and
