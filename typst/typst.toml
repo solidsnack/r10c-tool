@@ -1,0 +1,9 @@
+[package]
+name = "r10c"
+version = "0.1.0"
+entrypoint = "lib.typ"
+authors = ["Jason Dusek <jason.dusek@gmail.com>"]
+license = "MIT OR Apache-2.0"
+description = "Scaling according to the R10c series of preferred numbers."
+repository = "https://github.com/solidsnack/r10c"
+exclude = ["example.typ"]
