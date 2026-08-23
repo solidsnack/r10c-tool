@@ -32,10 +32,14 @@ build-cli:
 build-special:
     cargo +nightly build --features f16,f128
     cargo +nightly build --features cli,f16,f128
-    just wasm
-    just wasm deno
+    just build-typst
+    just build-wasm
+    just build-wasm deno
 
-wasm target="bundler":
+build-typst:
+    cargo build --release --features typst --target wasm32-unknown-unknown
+
+build-wasm target="bundler":
     #!/bin/bash
     set -o errexit -o nounset -o pipefail
 

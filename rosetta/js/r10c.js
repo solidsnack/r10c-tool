@@ -1,6 +1,11 @@
 class R10c {
+  static MIN_NORMAL = 2.2250738585072014e-308
+
   static near(n) {
-    if (!Number.isFinite(n) || Number.isNaN(n) || n === 0) return n
+    const abs = Math.abs(n)
+
+    // Check that number is not subnormal, NaN, zero, &c.
+    if (!(abs >= R10c.MIN_NORMAL && abs <= Number.MAX_VALUE)) return null
 
     const preferred = [
       0.8, 1.0, 1.25, 1.6, 2.0, 2.5,
@@ -25,7 +30,6 @@ class R10c {
       0.951544993495972,
     ]
 
-    const abs = Math.abs(n)
     const sign = Math.sign(n)
     const log10 = Math.log10(abs)
     const decade = Math.floor(log10)
@@ -46,20 +50,32 @@ class R10c {
   }
 
   static prev(n) {
-    if (!Number.isFinite(n) || Number.isNaN(n) || n === 0) return n
+    const abs = Math.abs(n)
 
-    if (n < 0) return -R10c.next(-n)
+    // Check that number is not subnormal, NaN, zero, &c.
+    if (!(abs >= R10c.MIN_NORMAL && abs <= Number.MAX_VALUE)) return null
+
+    if (n < 0) return -R10c.prev(abs)
 
     const m = R10c.near(n)
+
+    if (m === null) return m
+
     return m < n ? m : R10c.near(n * 0.8)
   }
 
   static next(n) {
-    if (!Number.isFinite(n) || Number.isNaN(n) || n === 0) return n
+    const abs = Math.abs(n)
 
-    if (n < 0) return -R10c.prev(-n)
+    // Check that number is not subnormal, NaN, zero, &c.
+    if (!(abs >= R10c.MIN_NORMAL && abs <= Number.MAX_VALUE)) return null
+
+    if (n < 0) return -R10c.next(abs)
 
     const m = R10c.near(n)
+
+    if (m === null) return m
+
     return m > n ? m : R10c.near(n / 0.8)
   }
 }

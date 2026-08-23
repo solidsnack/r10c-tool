@@ -1,6 +1,5 @@
-pub use std::num::NonZeroU32 as BackingType;
-
 pub use f128 as FloatingType;
+pub use u32 as BackingType;
 
 pub use crate::bits::Lens32 as LensType;
 

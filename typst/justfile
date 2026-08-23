@@ -1,0 +1,25 @@
+default: check
+
+# Build the WASM plugin via the parent crate into tmp/.
+wasm:
+    just --justfile ../justfile --working-directory .. build-typst
+    mkdir -p tmp
+    cp ../target/wasm32-unknown-unknown/release/r10c.wasm tmp/r10c.wasm
+
+# Compile the example against the built plugin (end-to-end smoke test).
+# Staged under tmp/ so lib.typ and the wasm sit together, as they do once
+# the package is installed.
+check: wasm
+    mkdir -p tmp/check
+    cp lib.typ tmp/r10c.wasm example.typ tmp/check/
+    typst compile tmp/check/example.typ tmp/example.pdf
+
+# Assemble the distributable package into dist/.
+dist: wasm
+    rm -rf dist
+    mkdir dist
+    cp typst.toml lib.typ README.md tmp/r10c.wasm dist/
+
+# Remove build artifacts.
+clean:
+    rm -rf tmp dist

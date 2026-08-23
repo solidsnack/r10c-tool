@@ -1,6 +1,5 @@
-pub use std::num::NonZeroU16 as BackingType;
-
 pub use f16 as FloatingType;
+pub use u16 as BackingType;
 
 pub use crate::bits::Lens16 as LensType;
 

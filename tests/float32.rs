@@ -390,4 +390,26 @@ proptest! {
             }
         }
     }
+
+    #[test]
+    fn into_and_from(
+        n in logspace_sampling(f32::MIN_POSITIVE, f32::MAX)
+    ) {
+        if let Some(d) = r10c::next(n) {
+            let bits: u16 = d.into();
+            let readback = float32::Descriptor::try_from(bits);
+
+            prop_assert!(
+                readback.is_ok(),
+                "A descriptor contained bits {bits:#034b} but could not be \
+                 restored from these bits."
+            );
+
+            prop_assert!(
+                readback.expect("Impossible error.") == d,
+                "A descriptor contained bits {bits:#034b} but could not be \
+                 restored from these bits."
+            );
+        }
+    }
 }

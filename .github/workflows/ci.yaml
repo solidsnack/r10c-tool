@@ -67,3 +67,18 @@ jobs:
     - uses: swatinem/rust-cache@v2
     - uses: extractions/setup-just@v2
     - run: just build-special
+
+  check-typst:
+    name: check-typst
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: taiki-e/install-action@v2
+      with:
+        tool: typst-cli
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: wasm32-unknown-unknown
+    - uses: swatinem/rust-cache@v2
+    - uses: extractions/setup-just@v2
+    - run: cd typst/ && just check
