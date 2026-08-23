@@ -31,6 +31,8 @@ impl TryFrom<Holder> for float64::Descriptor {
 #[derive(Debug, Deserialize, Serialize)]
 enum Request {
     Near(f64),
+    Next(f64),
+    Prev(f64),
     Resolve(Holder),
     Step(Holder, isize),
 }
@@ -44,6 +46,16 @@ pub fn request(data: &[u8]) -> Result<Vec<u8>, String> {
     let bytes = match req {
         Near(n) => {
             let d = float64::Descriptor::near(n);
+            let h: Option<Holder> = d.map(|d| d.into());
+            as_cbor(&h)
+        }
+        Next(n) => {
+            let d = float64::Descriptor::next(n);
+            let h: Option<Holder> = d.map(|d| d.into());
+            as_cbor(&h)
+        }
+        Prev(n) => {
+            let d = float64::Descriptor::prev(n);
             let h: Option<Holder> = d.map(|d| d.into());
             as_cbor(&h)
         }
