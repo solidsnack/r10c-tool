@@ -1,12 +1,13 @@
 // r10c -- round numbers to R10c preferred numbers.
 //
-// Numbers in the series are handled as opaque *descriptors*: `near` maps a
-// number to the nearest descriptor, `step` moves along the series, and
-// `resolve` turns a descriptor back into a number. Each returns `none` when
-// there is no representable result (e.g. zero, NaN, infinity, or a value
-// beyond the series bounds).
+// Numbers in the series are handled as opaque *descriptors*: `near`, `prev`
+// and `next` map a number to a descriptor -- the nearest position in the
+// series, or the nearest one strictly below or above it in magnitude --
+// `step` moves along the series, and `resolve` turns a descriptor back into a
+// number. Each returns `none` when there is no representable result (e.g.
+// zero, NaN, infinity, or a value beyond the series bounds).
 //
-// The three functions also accept a `length`. A length is rounded via its
+// All five functions also accept a `length`. A length is rounded via its
 // millimetre magnitude (`length.mm()`) and the result is handed back as a
 // length in millimetres (`... * 1mm`) -- never a descriptor -- so length in,
 // length out. (Lengths carrying `em` units are rejected by Typst's `.mm()`.)
@@ -32,23 +33,28 @@
 
 // Descriptor-domain primitives (the raw plugin calls).
 #let _near(n) = _wrap(_call((Near: float(n))))
+#let _prev(n) = _wrap(_call((Prev: float(n))))
+#let _next(n) = _wrap(_call((Next: float(n))))
 #let _step(descriptor, distance) = _wrap(
     _call((Step: (_bits(descriptor), distance))),
 )
 #let _resolve(descriptor) = _call((Resolve: _bits(descriptor)))
 
-// Float-domain composites, propagating `none`: the nearest R10c value to `x`,
-// and the value `distance` steps from the position nearest `x`.
-#let _near_value(x) = {
-    let d = _near(x)
-    if d == none { none } else { _resolve(d) }
+// Resolve a descriptor, or pass `none` through.
+#let _value(descriptor) = if descriptor == none {
+    none
+} else {
+    _resolve(descriptor)
 }
+
+// Float-domain composites, propagating `none`: the R10c value at, below and
+// above `x`, and the value `distance` steps from the position nearest `x`.
+#let _near_value(x) = _value(_near(x))
+#let _prev_value(x) = _value(_prev(x))
+#let _next_value(x) = _value(_next(x))
 #let _step_value(x, distance) = {
     let d = _near(x)
-    if d == none { none } else {
-        let stepped = _step(d, distance)
-        if stepped == none { none } else { _resolve(stepped) }
-    }
+    if d == none { none } else { _value(_step(d, distance)) }
 }
 
 // Re-express a float value (or `none`) as a length in millimetres.
@@ -60,6 +66,24 @@
     _mm(_near_value(n.mm()))
 } else {
     _near(n)
+}
+
+// Descriptor for the nearest position strictly below `n` in magnitude -- or,
+// given a length, that value as a length in millimetres. `none` if there is
+// none, or if `n` is not representable.
+#let prev(n) = if type(n) == length {
+    _mm(_prev_value(n.mm()))
+} else {
+    _prev(n)
+}
+
+// Descriptor for the nearest position strictly above `n` in magnitude -- or,
+// given a length, that value as a length in millimetres. `none` if there is
+// none, or if `n` is not representable.
+#let next(n) = if type(n) == length {
+    _mm(_next_value(n.mm()))
+} else {
+    _next(n)
 }
 
 // Descriptor `distance` steps along the series from `x` -- or, given a

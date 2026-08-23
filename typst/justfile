@@ -6,13 +6,31 @@ wasm:
     mkdir -p tmp
     cp ../target/wasm32-unknown-unknown/release/r10c.wasm tmp/r10c.wasm
 
-# Compile the example against the built plugin (end-to-end smoke test).
+# Compile the example and every test against the built plugin.
 # Staged under tmp/ so lib.typ and the wasm sit together, as they do once
 # the package is installed.
+#
+# Tests follow the tytanic layout -- tests/<name>/test.typ -- and are
+# compile-only: they carry no reference pages, so their assertions are the
+# test and a failure arrives as a compile error.
 check: wasm
-    mkdir -p tmp/check
+    #!/bin/bash
+    set -o errexit -o nounset -o pipefail
+
+    rm -rf tmp/check
+    mkdir -p tmp/check tmp/tests
     cp lib.typ tmp/r10c.wasm example.typ tmp/check/
-    typst compile tmp/check/example.typ tmp/example.pdf
+    cp -R tests tmp/check/
+
+    # --root pins the project root at the staged package, so a test can
+    # reach ../../lib.typ but nothing above it.
+    typst compile --root tmp/check tmp/check/example.typ tmp/example.pdf
+
+    for test in tmp/check/tests/*/test.typ; do
+        name="$(basename "$(dirname "$test")")"
+        echo "test: $name"
+        typst compile --root tmp/check "$test" "tmp/tests/$name.pdf"
+    done
 
 # Assemble the distributable package into dist/.
 dist: wasm
