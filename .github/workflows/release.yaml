@@ -1,0 +1,37 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+
+  typst-package:
+    name: typst-package
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: taiki-e/install-action@v2
+      with:
+        tool: typst-cli
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: wasm32-unknown-unknown
+    - uses: swatinem/rust-cache@v2
+    - uses: extractions/setup-just@v2
+    - run: just check-version "$GITHUB_REF_NAME"
+    # CI does not run on tag pushes, so the package is verified here rather
+    # than trusting whatever ran on the branch.
+    - run: cd typst/ && just check
+    - run: cd typst/ && just archive
+    - name: release
+      run: |
+        gh release create "$GITHUB_REF_NAME" \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes \
+            typst/tmp/r10c-typst-*.zip
+      env:
+        GH_TOKEN: ${{ github.token }}

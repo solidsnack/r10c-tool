@@ -38,6 +38,22 @@ dist: wasm
     mkdir dist
     cp typst.toml lib.typ README.md tmp/r10c.wasm dist/
 
+# Zip the distributable package for release, laid out as Typst expects it
+# under a packages directory: r10c/<version>/.
+archive: dist
+    #!/bin/bash
+    set -o errexit -o nounset -o pipefail
+
+    version="$(sed -n 's/^version = "\(.*\)"/\1/p' typst.toml | head -1)"
+
+    rm -rf tmp/archive
+    mkdir -p "tmp/archive/r10c/$version"
+    cp dist/* "tmp/archive/r10c/$version/"
+
+    rm -f "tmp/r10c-typst-$version.zip"
+    (cd tmp/archive && zip -r "../r10c-typst-$version.zip" r10c)
+    echo "tmp/r10c-typst-$version.zip"
+
 # Remove build artifacts.
 clean:
     rm -rf tmp dist

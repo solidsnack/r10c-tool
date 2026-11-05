@@ -81,6 +81,27 @@ a length in millimetres. For example:
 that a length carrying `em` units cannot be rounded (Typst's `.mm()` rejects
 it).
 
+## Installing
+
+Every release attaches `r10c-typst-<version>.zip`, which unpacks to
+`r10c/<version>/` -- the layout Typst expects of a local package. Unzip it
+into the `local` namespace of your Typst packages directory:
+
+- macOS -- `~/Library/Application Support/typst/packages/local`
+- Linux -- `${XDG_DATA_HOME:-~/.local/share}/typst/packages/local`
+- Windows -- `%APPDATA%\typst\packages\local`
+
+```sh
+dir=~/"Library/Application Support/typst/packages/local"
+mkdir -p "$dir" && unzip r10c-typst-0.1.0.zip -d "$dir"
+```
+
+Then import it by name, as the examples above do:
+
+```typst
+#import "@local/r10c:0.1.0"
+```
+
 ## Vendoring
 
 This is a small package and can be easily vendored: copy `lib.typ` and
